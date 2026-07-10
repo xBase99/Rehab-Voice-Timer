@@ -1,4 +1,3 @@
-// 1. 다국어 번역 데이터 및 설정 (광고 제거 및 입력 라벨 추가)
 const languages = {
     ko: { 
         title: "재활 보이스 타이머", start: "시작", stop: "정지", ready: "준비", set: "세트", count: "번", rest: "휴식", done: "치료 완료", langCode: "ko-KR",
@@ -18,16 +17,14 @@ const languages = {
     }
 };
 
-// 시스템 언어 감지 (지원 안 하면 영어 'en' 기본값)
 const userLang = navigator.language.substring(0, 2);
 const currentLang = languages[userLang] ? userLang : 'en';
 const t = languages[currentLang];
 
-// 타이머 상태 제어 변수
 let isRunning = false;
-let timeoutId = null;
+let globalAbortController = null;
 
-// DOM 요소 바인딩 및 다국어 적용
+// DOM 바인딩
 document.getElementById('title').innerText = t.title;
 document.getElementById('lblSets').innerText = t.lblSets;
 document.getElementById('lblReps').innerText = t.lblReps;
@@ -38,6 +35,7 @@ const startBtn = document.getElementById('startBtn');
 const stopBtn = document.getElementById('stopBtn');
 const statusDiv = document.getElementById('status');
 const infoDiv = document.getElementById('info');
+const progressCircle = document.getElementById('progressCircle');
 
 const inputSets = document.getElementById('inputSets');
 const inputReps = document.getElementById('inputReps');
@@ -47,31 +45,68 @@ const inputRest = document.getElementById('inputRest');
 startBtn.innerText = t.start;
 stopBtn.innerText = t.stop;
 
-// 음성(TTS) 출력 함수
-function speak(text) {
+const CIRCUMFERENCE = 2 * Math.PI * 70;
+progressCircle.style.strokeDasharray = CIRCUMFERENCE;
+setCircleProgress(1);
+
+// 음성 출력 함수
+function speak(text, isQuiet = false) {
     if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = t.langCode;
+        utterance.volume = isQuiet ? 0.3 : 1.0; 
+        if (!isQuiet) window.speechSynthesis.cancel(); 
         window.speechSynthesis.speak(utterance);
     }
 }
 
-// 비동기 지연 함수 (정지 버튼 클릭 시 타이머가 즉시 깨어나도록 수정)
-function delay(ms) {
+// 원형 게이지 업데이트
+function setCircleProgress(ratio) {
+    const offset = CIRCUMFERENCE * (1 - ratio);
+    progressCircle.style.strokeDashoffset = offset;
+}
+
+// 초 단위 실시간 카운트다운 및 시각 시계 업데이트
+function waitSeconds(seconds, signal, updateUIFn) {
     return new Promise((resolve, reject) => {
-        if (!isRunning) {
-            reject(new Error("Stopped"));
-            return;
-        }
-        timeoutId = setTimeout(() => {
-            timeoutId = null;
-            resolve();
-        }, ms);
+        let remainingMs = seconds * 1000;
+        const intervalMs = 100; 
+        let lastLoggedSecond = Math.ceil(seconds);
+
+        if (signal.aborted) return reject(new Error("aborted"));
+
+        const timer = setInterval(() => {
+            if (signal.aborted) {
+                clearInterval(timer);
+                return reject(new Error("aborted"));
+            }
+
+            remainingMs -= intervalMs;
+            const currentSecond = Math.ceil(remainingMs / 1000);
+
+            const ratio = Math.max(0, remainingMs / (seconds * 1000));
+            setCircleProgress(ratio);
+
+            if (updateUIFn) updateUIFn(currentSecond);
+
+            if (currentSecond !== lastLoggedSecond && currentSecond > 0 && currentSecond <= 3) {
+                speak(`${currentSecond}`, true);
+                lastLoggedSecond = currentSecond;
+            }
+
+            if (remainingMs <= 0) {
+                clearInterval(timer);
+                resolve();
+            }
+        }, intervalMs);
+
+        signal.addEventListener('abort', () => {
+            clearInterval(timer);
+            reject(new Error("aborted"));
+        });
     });
 }
 
-// 타이머 작동 중 입력 칸 잠금 함수
 function setInputsDisabled(disabled) {
     inputSets.disabled = disabled;
     inputReps.disabled = disabled;
@@ -79,14 +114,15 @@ function setInputsDisabled(disabled) {
     inputRest.disabled = disabled;
 }
 
-// 타이머 핵심 로직
 async function startRoutine() {
     isRunning = true;
+    globalAbortController = new AbortController();
+    const signal = globalAbortController.signal;
+
     startBtn.style.display = 'none';
     stopBtn.style.display = 'block';
     setInputsDisabled(true);
     
-    // 사용자가 화면에 입력한 값을 실시간으로 읽어옴
     const totalSets = parseInt(inputSets.value) || 3;
     const repsPerSet = parseInt(inputReps.value) || 10;
     const intervalSec = parseInt(inputInterval.value) || 3;
@@ -96,31 +132,41 @@ async function startRoutine() {
         // 준비 단계
         statusDiv.innerText = t.ready;
         speak(t.ready);
-        await delay(2000);
+        await waitSeconds(2, signal);
 
         for (let set = 1; set <= totalSets; set++) {
+            if (!isRunning) return;
+
+            // [추가] 새로운 세트가 시작될 때 화면 안내 및 "1 세트", "2 세트" 음성 출력
+            statusDiv.innerText = `${set} ${t.set}`;
+            infoDiv.innerText = `${t.set} ${set} / ${totalSets}`;
+            speak(`${set}${t.set}`); 
+            
+            // 세트 이름을 말한 후 운동을 시작하기 전 잠깐의 여유(1.5초)를 줍니다.
+            await waitSeconds(1.5, signal);
+
             for (let rep = 1; rep <= repsPerSet; rep++) {
                 if (!isRunning) return;
 
-                // 화면 업데이트
+                // 횟수 화면 업데이트 및 음성 출력 ("1 번", "2 번" ...)
                 statusDiv.innerText = `${rep}`;
                 infoDiv.innerText = `${t.set} ${set} / ${totalSets}`;
+                speak(`${rep}${t.count}`);
                 
-                // 숫자 음성 출력
-                speak(`${rep}`);
-                
-                // 간격만큼 대기 (마지막 세트의 마지막 횟수가 아니면 설정된 초만큼 대기)
+                // 설정된 초(Interval) 만큼 대기 (마지막 세트의 마지막 횟수가 아니면 대기)
                 if (!(set === totalSets && rep === repsPerSet)) {
-                    await delay(intervalSec * 1000);
+                    await waitSeconds(intervalSec, signal);
                 }
             }
             
-            // 세트 사이 휴식 시간
+            // 세트 사이 휴식
             if (set < totalSets) {
                 if (!isRunning) return;
                 statusDiv.innerText = t.rest;
                 speak(t.rest);
-                await delay(restSec * 1000);
+                await waitSeconds(restSec, signal, (sec) => {
+                    statusDiv.innerText = `${t.rest}\n(${sec})`;
+                });
             }
         }
         
@@ -128,19 +174,18 @@ async function startRoutine() {
         statusDiv.innerText = "✓";
         infoDiv.innerText = t.done;
         speak(t.done);
+        setCircleProgress(1);
         resetUI();
 
     } catch (error) {
-        console.log("Timer stopped by user.");
+        console.log("Timer stopped or aborted.");
     }
 }
 
-// 타이머 강제 정지 로직
 function stopRoutine() {
     isRunning = false;
-    if (timeoutId) {
-        clearTimeout(timeoutId);
-        timeoutId = null;
+    if (globalAbortController) {
+        globalAbortController.abort();
     }
     if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
@@ -148,6 +193,7 @@ function stopRoutine() {
     resetUI();
     statusDiv.innerText = "-";
     infoDiv.innerText = "";
+    setCircleProgress(1);
 }
 
 function resetUI() {
