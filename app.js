@@ -31,7 +31,7 @@ else if (systemLang === 'zh') currentLangCode = 'zh-CN';
 
 let isRunning = false;
 let globalAbortController = null;
-let systemVoices = []; // 기기 내장 목소리 데이터를 담을 배열
+let systemVoices = []; 
 
 // DOM 요소 바인딩
 const langSelect = document.getElementById('langSelect');
@@ -55,15 +55,17 @@ const inputRest = document.getElementById('inputRest');
 const CIRCUMFERENCE = 2 * Math.PI * 70;
 progressCircle.style.strokeDasharray = CIRCUMFERENCE;
 
-// [추가] 기기 내부 음성(목소리) 데이터 목록을 로드하는 함수
+// 목소리 목록 로드 함수 보완
 function loadVoices() {
     if ('speechSynthesis' in window) {
         systemVoices = window.speechSynthesis.getVoices();
     }
 }
+
+// 최초 로드 및 크롬/파이어폭스 비동기 이벤트 리스너 등록
 loadVoices();
 if ('speechSynthesis' in window && window.speechSynthesis.onvoiceschanged !== undefined) {
-    window.speechSynthesis.onvoiceschanged = loadVoices; // 크롬 등 비동기 로드 대응
+    window.speechSynthesis.onvoiceschanged = loadVoices;
 }
 
 function updateLanguageUI() {
@@ -87,25 +89,29 @@ langSelect.addEventListener('change', (e) => {
     updateLanguageUI();
 });
 
-// [핵심 변경] 기기에 내장된 전용 목소리 데이터를 찾아 실시간으로 주입하는 발음 로직
+// 음성 출력 로직 보완 (내장 데이터가 없더라도 시스템 기본음으로 나오게끔 예외처리 추가)
 function speak(text, isQuiet = false) {
     if ('speechSynthesis' in window) {
+        // 모바일 브라우저 뻗음 방지를 위해 기존 음성 취소 처리를 상단으로 이동
+        if (!isQuiet) window.speechSynthesis.cancel(); 
+
         const t = languages[currentLangCode];
         const utterance = new SpeechSynthesisUtterance(text);
         
-        // 현재 선택된 국가 코드(ko-KR, zh-CN, zh-HK 등)와 일치하는 내장 목소리 데이터 검색
-        const matchingVoice = systemVoices.find(voice => 
-            voice.lang.toLowerCase() === t.langCode.toLowerCase() || 
-            voice.lang.toLowerCase().startsWith(t.langCode.toLowerCase().substring(0, 2))
-        );
-        
-        if (matchingVoice) {
-            utterance.voice = matchingVoice; // 내장 목소리 데이터 주입
+        // 내장 목소리가 로드되었는지 확인 후 매칭
+        if (systemVoices && systemVoices.length > 0) {
+            const matchingVoice = systemVoices.find(voice => 
+                voice.lang.toLowerCase() === t.langCode.toLowerCase() || 
+                voice.lang.toLowerCase().replace('_', '-').startsWith(t.langCode.toLowerCase().substring(0, 2))
+            );
+            if (matchingVoice) {
+                utterance.voice = matchingVoice;
+            }
         }
         
         utterance.lang = t.langCode;
         utterance.volume = isQuiet ? 0.3 : 1.0; 
-        if (!isQuiet) window.speechSynthesis.cancel(); 
+        
         window.speechSynthesis.speak(utterance);
     }
 }
@@ -167,6 +173,9 @@ async function startRoutine() {
     globalAbortController = new AbortController();
     const signal = globalAbortController.signal;
 
+    // 혹시 처음에 목소리 로드가 덜 되었을 경우를 대비해 시작 시 한 번 더 로드 시도
+    if (systemVoices.length === 0) loadVoices();
+
     const t = languages[currentLangCode];
     startBtn.style.display = 'none';
     stopBtn.style.display = 'block';
@@ -183,15 +192,15 @@ async function startRoutine() {
         await waitSeconds(2, signal);
 
         for (let set = 1; set <= totalSets; set++) {
-            if (!signal.aborted) {
-                statusDiv.innerText = `${set} ${t.set}`;
-                infoDiv.innerText = `${t.set} ${set} / ${totalSets}`;
-                speak(`${set}${t.set}`); 
-                await waitSeconds(1.5, signal);
-            }
+            if (signal.aborted) return;
+
+            statusDiv.innerText = `${set} ${t.set}`;
+            infoDiv.innerText = `${t.set} ${set} / ${totalSets}`;
+            speak(`${set}${t.set}`); 
+            await waitSeconds(1.5, signal);
 
             for (let rep = 1; rep <= repsPerSet; rep++) {
-                if (!isRunning) return;
+                if (!isRunning || signal.aborted) return;
 
                 statusDiv.innerText = `${rep}`;
                 infoDiv.innerText = `${t.set} ${set} / ${totalSets}`;
@@ -203,7 +212,7 @@ async function startRoutine() {
             }
             
             if (set < totalSets) {
-                if (!isRunning) return;
+                if (!isRunning || signal.aborted) return;
                 statusDiv.innerText = t.rest;
                 speak(t.rest);
                 await waitSeconds(restSec, signal, (sec) => {
@@ -243,5 +252,6 @@ function resetUI() {
     setInputsDisabled(false);
 }
 
+// 초기 UI 로드 및 예외 처리
 updateLanguageUI();
 setCircleProgress(1);
