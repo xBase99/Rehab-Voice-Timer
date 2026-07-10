@@ -1,214 +1,245 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rehab Voice Timer</title>
+    <title>Rehab Voice Timer Pro</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=Noto+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
     
     <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: #151f32;
+            --neon-blue: #00f2fe;
+            --neon-purple: #4facfe;
+            --text-main: #ffffff;
+            --text-muted: #64748b;
+        }
+
         body {
-            font-family: 'Noto Sans KR', 'Noto Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
-            color: #2d3748;
+            font-family: 'Noto Sans KR', 'Montserrat', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
             margin: 0;
-        }
-        .container {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 35px 30px;
-            border-radius: 24px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.06);
-            text-align: center;
-            max-width: 400px;
-            width: 100%;
-            box-sizing: border-box;
-            backdrop-filter: blur(10px);
-        }
-        
-        .lang-selector-container {
-            display: flex;
-            justify-content: flex-end;
-            align-items: center;
-            margin-bottom: 20px;
-            gap: 8px;
-        }
-        .lang-select {
-            font-family: inherit;
-            padding: 8px 14px;
-            border-radius: 20px;
-            border: 1px solid #e2e8f0;
-            background-color: #ffffff;
-            font-size: 13px;
-            font-weight: 500;
-            color: #4a5568;
-            cursor: pointer;
-            outline: none;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-            transition: all 0.25s ease;
-        }
-        .lang-select:hover {
-            border-color: #cbd5e0;
-            background-color: #f7fafc;
+            overflow: hidden;
         }
 
-        h1 { margin-top: 0; margin-bottom: 25px; color: #1a202c; font-size: 24px; font-weight: 700; letter-spacing: -0.5px; }
-        
-        .input-group {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 14px;
-            text-align: left;
-        }
-        .input-group label {
-            font-size: 14px;
-            color: #4a5568;
-            font-weight: 500;
-            flex: 1;
-        }
-        .input-group input {
-            font-family: inherit;
-            width: 85px;
-            padding: 8px 10px;
-            border: 1px solid #cbd5e0;
-            border-radius: 10px;
-            font-size: 14px;
-            font-weight: 500;
+        .container {
+            background-color: var(--card-bg);
+            padding: 35px 30px;
+            border-radius: 32px;
+            box-shadow: 0 0 40px rgba(0, 242, 254, 0.06), 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            width: 100%;
+            max-width: 380px;
+            box-sizing: border-box;
+            border: 1px solid rgba(255, 255, 255, 0.03);
             text-align: center;
-            background-color: #ffffff;
+        }
+
+        .app-header {
+            margin-bottom: 25px;
+        }
+
+        .app-title {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, var(--neon-blue) 0%, var(--neon-purple) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 0;
+        }
+
+        /* 4분할 깔끔한 세팅 격자 */
+        .setup-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            margin-bottom: 30px;
+        }
+
+        .input-card {
+            background: rgba(255, 255, 255, 0.01);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            padding: 12px;
+            border-radius: 18px;
+            display: flex;
+            flex-direction: column;
+            text-align: left;
+            transition: border 0.2s;
+        }
+
+        .input-card:focus-within {
+            border-color: var(--neon-blue);
+        }
+
+        .input-card label {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        .input-card input {
+            background: none;
+            border: none;
+            color: #ffffff;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 20px;
+            font-weight: 700;
             outline: none;
-            transition: border-color 0.2s;
+            width: 100%;
         }
-        .input-group input:focus {
-            border-color: #3182ce;
-        }
-        
-        .timer-circle-container {
+
+        /* 메인 비주얼 서클 타이머 */
+        .visual-timer-area {
             position: relative;
-            width: 180px;
-            height: 180px;
-            margin: 25px auto;
+            width: 210px;
+            height: 210px;
+            margin: 0 auto 30px auto;
         }
-        .timer-svg {
-            transform: rotate(-90deg);
+
+        .circle-svg {
             width: 100%;
             height: 100%;
+            transform: rotate(-90deg);
         }
-        .timer-bg {
+
+        .circle-bg {
             fill: none;
-            stroke: #edf2f7;
-            stroke-width: 6;
+            stroke: rgba(255, 255, 255, 0.02);
+            stroke-width: 8;
         }
-        .timer-progress {
+
+        .circle-progress {
             fill: none;
-            stroke: #3182ce;
-            stroke-width: 6;
+            stroke: url(#neonGlow);
+            stroke-width: 8;
             stroke-linecap: round;
-            stroke-dasharray: 440;
+            stroke-dasharray: 565.48; /* 2 * PI * 90 */
             stroke-dashoffset: 0;
             transition: stroke-dashoffset 0.1s linear;
         }
-        
-        .status-display {
+
+        .center-display {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 36px;
+            width: 100%;
+        }
+
+        .main-status {
+            font-family: 'Montserrat', 'Noto Sans KR', sans-serif;
+            font-size: 48px;
             font-weight: 700;
-            color: #2b6cb0;
+            color: var(--text-main);
+            line-height: 1.1;
             margin: 0;
-            white-space: pre-line;
-            line-height: 1.3;
-            letter-spacing: -1px;
         }
-        
-        .info-display {
-            font-size: 15px;
-            color: #718096;
-            margin-bottom: 25px;
-            min-height: 24px;
+
+        .sub-info {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 6px;
             font-weight: 500;
+            min-height: 18px;
+            letter-spacing: 0.5px;
         }
-        
-        .btn-group {
-            display: flex;
-            gap: 12px;
-        }
-        button {
-            font-family: inherit;
-            flex: 1;
-            color: white;
+
+        /* 하단 컨트롤 버튼 */
+        .btn {
+            width: 100%;
+            padding: 16px;
+            border-radius: 18px;
             border: none;
-            padding: 15px;
+            font-family: inherit;
             font-size: 16px;
-            border-radius: 12px;
+            font-weight: 700;
             cursor: pointer;
-            font-weight: 600;
             transition: all 0.2s ease;
-            box-shadow: 0 4px 12px rgba(49, 130, 206, 0.2);
         }
-        #startBtn { background: linear-gradient(135deg, #3182ce 0%, #2b6cb0 100%); }
-        #startBtn:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(49, 130, 206, 0.3); }
-        #startBtn:disabled { background: #cbd5e0; cursor: not-allowed; transform: none; box-shadow: none; }
-        
-        #stopBtn { background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%); display: none; box-shadow: 0 4px 12px rgba(229, 62, 62, 0.2); }
-        #stopBtn:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(229, 62, 62, 0.3); }
+
+        .btn-start {
+            background: linear-gradient(135deg, var(--neon-purple) 0%, var(--neon-blue) 100%);
+            color: #000000;
+            box-shadow: 0 4px 20px rgba(0, 242, 254, 0.25);
+        }
+
+        .btn-start:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 24px rgba(0, 242, 254, 0.4);
+        }
+
+        .btn-stop {
+            background: linear-gradient(135deg, #ff4e50 0%, #f9d423 100%);
+            color: #000000;
+            display: none;
+            box-shadow: 0 4px 20px rgba(255, 78, 80, 0.2);
+        }
+
+        .btn-stop:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 24px rgba(255, 78, 80, 0.35);
+        }
+
+        input:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="lang-selector-container">
-        <span id="langIcon">🌐</span>
-        <select id="langSelect" class="lang-select">
-            <option value="ko">한국어 (KO)</option>
-            <option value="en">English (EN)</option>
-            <option value="ja">日本語 (JA)</option>
-            <option value="zh-CN">简体中文 (보통화)</option>
-            <option value="zh-HK">繁體中文 (광둥어)</option>
-        </select>
+    <div class="app-header">
+        <h1 class="app-title">REHAB VOICE TIMER</h1>
     </div>
 
-    <h1 id="title">Rehab Timer</h1>
-    
-    <div class="input-group">
-        <label id="lblSets" for="inputSets">-</label>
-        <input type="number" id="inputSets" value="3" min="1">
-    </div>
-    <div class="input-group">
-        <label id="lblReps" for="inputReps">-</label>
-        <input type="number" id="inputReps" value="10" min="1">
-    </div>
-    <div class="input-group">
-        <label id="lblInterval" for="inputInterval">-</label>
-        <input type="number" id="inputInterval" value="3" min="2">
-    </div>
-    <div class="input-group">
-        <label id="lblRest" for="inputRest">-</label>
-        <input type="number" id="inputRest" value="5" min="0">
+    <div class="setup-grid">
+        <div class="input-card">
+            <label>목표 세트 수</label>
+            <input type="number" id="inputSets" value="3" min="1">
+        </div>
+        <div class="input-card">
+            <label>세트당 횟수</label>
+            <input type="number" id="inputReps" value="10" min="1">
+        </div>
+        <div class="input-card">
+            <label>카운트 간격 (초)</label>
+            <input type="number" id="inputInterval" value="3" min="2">
+        </div>
+        <div class="input-card">
+            <label>세트간 휴식 (초)</label>
+            <input type="number" id="inputRest" value="5" min="0">
+        </div>
     </div>
 
-    <div class="timer-circle-container">
-        <svg class="timer-svg" viewBox="0 0 150 150">
-            <circle class="timer-bg" cx="75" cy="75" r="70"></circle>
-            <circle class="timer-progress" id="progressCircle" cx="75" cy="75" r="70"></circle>
+    <div class="visual-timer-area">
+        <svg class="circle-svg" viewBox="0 0 200 200">
+            <defs>
+                <linearGradient id="neonGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="var(--neon-purple)" />
+                    <stop offset="100%" stop-color="var(--neon-blue)" />
+                </linearGradient>
+            </defs>
+            <circle class="circle-bg" cx="100" cy="100" r="90"></circle>
+            <circle class="circle-progress" id="circleProgress" cx="100" cy="100" r="90"></circle>
         </svg>
-        <div class="status-display" id="status">-</div>
+        <div class="center-display">
+            <div class="main-status" id="mainStatus">대기</div>
+            <div class="sub-info" id="subInfo">READY</div>
+        </div>
     </div>
-    
-    <div class="info-display" id="info"></div>
-    
-    <div class="btn-group">
-        <button id="startBtn">Start</button>
-        <button id="stopBtn">Stop</button>
-    </div>
+
+    <button class="btn btn-start" id="btnStart">루틴 시작</button>
+    <button class="btn btn-stop" id="btnStop">정지</button>
 </div>
 
 <script src="app.js"></script>
