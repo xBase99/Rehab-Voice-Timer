@@ -17,18 +17,44 @@ const dom = {
 
 const CIRCUMFERENCE = 2 * Math.PI * 90; // 565.48
 
-// 시스템 목소리 로드 안전벨트
+// [핵심 변경] 브라우저 내장 음성 자료 로딩 체크 함수
 function fetchSystemVoices() {
-    if ('speechSynthesis' in window) {
-        systemVoices = window.speechSynthesis.getVoices();
+    if (!('speechSynthesis' in window)) {
+        dom.btnStart.innerText = "TTS 미지원 브라우저";
+        return;
+    }
+
+    systemVoices = window.speechSynthesis.getVoices();
+
+    // 음성 데이터 배열이 정상적으로 채워졌는지 확인
+    if (systemVoices && systemVoices.length > 0) {
+        console.log("PC 음성 자료 로드 완료. 총 개수:", systemVoices.length);
+        
+        // 타이머가 실행 중이 아닐 때만 버튼을 활성화 상태로 전환
+        if (!isRunning) {
+            dom.btnStart.disabled = false;
+            dom.btnStart.innerText = "루틴 시작";
+            dom.mainStatus.innerText = "대기";
+            dom.subInfo.innerText = "READY";
+        }
+    } else {
+        // 아직 음성 데이터를 가져오지 못했다면 버튼을 잠그고 대기 상태 표시
+        dom.btnStart.disabled = true;
+        dom.btnStart.innerText = "음성 로딩 중...";
+        dom.mainStatus.innerText = "로딩";
+        dom.subInfo.innerText = "LOADING VOICES";
     }
 }
+
+// 1. 최초 로드 시 시도
 fetchSystemVoices();
+
+// 2. PC 브라우저가 음성 자료 준비를 마쳤을 때 발생하는 이벤트 리스너 등록 (매우 중요)
 if ('speechSynthesis' in window && window.speechSynthesis.onvoiceschanged !== undefined) {
     window.speechSynthesis.onvoiceschanged = fetchSystemVoices;
 }
 
-// [핵심 기능] 언어 설정이 없어도 특정 국가 코드를 주입하면 기기에서 즉시 해당 목소리를 매칭해 내는 로직
+// 다국어 즉시 발음 엔진
 function speakMultilingual(text, targetLangCode, isQuiet = false) {
     if (!('speechSynthesis' in window)) return;
     try {
@@ -38,7 +64,6 @@ function speakMultilingual(text, targetLangCode, isQuiet = false) {
         utterance.lang = targetLangCode;
         utterance.volume = isQuiet ? 0.25 : 1.0;
 
-        // 시스템 목소리 배열 내에서 매칭되는 언어 가로채기 적용
         if (systemVoices && systemVoices.length > 0) {
             const matchedVoice = systemVoices.find(v => 
                 v.lang.toLowerCase() === targetLangCode.toLowerCase() ||
@@ -78,7 +103,6 @@ function startDelayCountdown(seconds, nextLangCode, onTick) {
             setVisualProgress(Math.max(0, remainingMs / (seconds * 1000)));
             if (onTick) onTick(currentSec);
 
-            // 다음 운동 시작 3초 전 카운트다운은 다음 운동을 진행할 국가의 언어로 자동 나지막하게 알림
             if (currentSec !== lastLoggedSec && currentSec > 0 && currentSec <= 3) {
                 speakMultilingual(`${currentSec}`, nextLangCode, true);
                 lastLoggedSec = currentSec;
@@ -100,20 +124,16 @@ async function runWorkoutRoutine() {
 
     const totalSets = parseInt(dom.inputSets.value) || 3;
     const repsPerSet = parseInt(dom.inputReps.value) || 10;
-    const intervalSec = parseInt(dom.inputInterval.value) || 3;
+    const intervalSec = parseInt(inputInterval.value) || 3;
     const restSec = parseInt(dom.inputRest.value) || 5;
 
     try {
-        // 1. 준비 단계 (한국어로 실행)
         dom.mainStatus.innerText = "준비";
         dom.subInfo.innerText = "READY";
         speakMultilingual("준비", "ko-KR");
         await startDelayCountdown(2, "ko-KR");
 
-        // 메인 운동 루틴 가동
         for (let set = 1; set <= totalSets; set++) {
-            
-            // 세트 시작 브리핑 ("1세트", "2세트" 안내)
             dom.mainStatus.innerText = `${set}세트`;
             dom.subInfo.innerText = `SET ${set} / ${totalSets}`;
             speakMultilingual(`${set}세트`, "ko-KR");
@@ -121,20 +141,17 @@ async function runWorkoutRoutine() {
 
             for (let rep = 1; rep <= repsPerSet; rep++) {
                 
-                // [원하시는 대로 다국어 자동 배치 영역]
-                // 기본 한국어 발음 "1번", "2번" 처리
+                // [기본 설정] 한국어로 "1번", "2번" 명확하게 단위 처리
                 let textToSpeak = `${rep}번`;
                 let langCodeToUse = "ko-KR";
 
-                // 예시 커스텀 배치: 만약 운동 도중 기분 전환이나 테스트를 위해 
-                // 짝수 번호는 일본어로, 5의 배수는 중국어로 나오게 원하신다면 아래처럼 마음껏 분기가 가능합니다.
-                // 현재는 기본적으로 안전하게 한국어로 또박또박 단위를 붙여서 Two 오인을 완벽 제거했습니다.
+                // 주석(/* */)을 제거하시면 다국어 분기 테스트가 가능합니다.
                 /*
                 if (rep % 2 === 0) {
-                    textToSpeak = `${rep}回`; // 일본어 "이 카이", "욘 카이"
+                    textToSpeak = `${rep}回`; // 일본어
                     langCodeToUse = "ja-JP";
                 } else if (rep % 5 === 0) {
-                    textToSpeak = `${rep}次`; // 중국어 보통화 "우 츠"
+                    textToSpeak = `${rep}次`; // 중국어
                     langCodeToUse = "zh-CN";
                 }
                 */
@@ -148,7 +165,6 @@ async function runWorkoutRoutine() {
                 }
             }
 
-            // 세트 종료 후 휴식 시간 전환
             if (set < totalSets) {
                 dom.mainStatus.innerText = "휴식";
                 speakMultilingual("휴식", "ko-KR");
@@ -158,7 +174,6 @@ async function runWorkoutRoutine() {
             }
         }
 
-        // 전체 완료 성공
         dom.mainStatus.innerText = "✓";
         dom.subInfo.innerText = "치료 완료";
         speakMultilingual("치료가 완료되었습니다. 수고하셨습니다.", "ko-KR");
@@ -166,7 +181,7 @@ async function runWorkoutRoutine() {
         shutdownRoutineUI();
 
     } catch (e) {
-        console.log("타이머가 사용자에 의해 강제 정지되었습니다.");
+        console.log("타이머 정지");
     }
 }
 
@@ -186,6 +201,7 @@ function shutdownRoutineUI() {
     dom.btnStart.style.display = 'block';
     dom.btnStop.style.display = 'none';
     toggleInputsLock(false);
+    fetchSystemVoices(); // 원래 준비 상태 버튼으로 즉시 복구
 }
 
 function toggleInputsLock(isLock) {
@@ -195,8 +211,11 @@ function toggleInputsLock(isLock) {
     dom.inputRest.disabled = isLock;
 }
 
-// 초기화
+// 초기 UI 바인딩 및 버튼 잠금 (음성이 들어오기 전까지 대기)
 dom.circleProgress.style.strokeDasharray = CIRCUMFERENCE;
 setVisualProgress(1);
+dom.btnStart.disabled = true;
+dom.btnStart.innerText = "음성 로딩 중...";
+
 dom.btnStart.addEventListener('click', runWorkoutRoutine);
 dom.btnStop.addEventListener('click', stopWorkoutRoutine);
