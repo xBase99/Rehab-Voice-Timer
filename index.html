@@ -23,42 +23,98 @@
             text-align: center;
             max-width: 400px;
             width: 100%;
+            box-sizing: border-box;
         }
-        h1 { margin-bottom: 24px; color: #4a5568; font-size: 24px; }
+        h1 { margin-bottom: 20px; color: #4a5568; font-size: 24px; }
+        
+        /* [추가] 유저 입력란 스타일 */
+        .input-group {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            text-align: left;
+        }
+        .input-group label {
+            font-size: 14px;
+            color: #4a5568;
+            font-weight: 500;
+            flex: 1;
+        }
+        .input-group input {
+            width: 80px;
+            padding: 8px;
+            border: 1px solid #cbd5e0;
+            border-radius: 6px;
+            font-size: 14px;
+            text-align: center;
+        }
+        
         .status-display {
             font-size: 48px;
             font-weight: bold;
             color: #3182ce;
-            margin: 20px 0;
+            margin: 20px 0 10px 0;
             min-height: 70px;
         }
         .info-display {
-            font-size: 20px;
+            font-size: 18px;
             color: #4a5568;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
+            min-height: 27px;
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 10px;
         }
         button {
-            background-color: #3182ce;
+            flex: 1;
             color: white;
             border: none;
-            padding: 12px 40px;
-            font-size: 18px;
+            padding: 12px;
+            font-size: 16px;
             border-radius: 8px;
             cursor: pointer;
             transition: background 0.2s;
-            width: 100%;
         }
-        button:hover { background-color: #2b6cb0; }
-        button:disabled { background-color: #cbd5e0; cursor: not-allowed; }
+        #startBtn { background-color: #3182ce; }
+        #startBtn:hover { background-color: #2b6cb0; }
+        #startBtn:disabled { background-color: #cbd5e0; cursor: not-allowed; }
+        
+        #stopBtn { background-color: #e53e3e; display: none; }
+        #stopBtn:hover { background-color: #c53030; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <h1 id="title">Rehab Timer</h1>
+    
+    <div class="input-group">
+        <label id="lblSets" for="inputSets">목표 세트 수</label>
+        <input type="number" id="inputSets" value="3" min="1">
+    </div>
+    <div class="input-group">
+        <label id="lblReps" for="inputReps">세트당 횟수</label>
+        <input type="number" id="inputReps" value="10" min="1">
+    </div>
+    <div class="input-group">
+        <label id="lblInterval" for="inputInterval">카운트 간격 (초)</label>
+        <input type="number" id="inputInterval" value="3" min="1">
+    </div>
+    <div class="input-group">
+        <label id="lblRest" for="inputRest">세트 간 휴식 (초)</label>
+        <input type="number" id="inputRest" value="5" min="0">
+    </div>
+
     <div class="status-display" id="status">-</div>
     <div class="info-display" id="info"></div>
-    <button id="startBtn">Start</button>
+    
+    <div class="btn-group">
+        <button id="startBtn">Start</button>
+        <button id="stopBtn">Stop</button>
+    </div>
 </div>
 
 <script src="app.js"></script>
